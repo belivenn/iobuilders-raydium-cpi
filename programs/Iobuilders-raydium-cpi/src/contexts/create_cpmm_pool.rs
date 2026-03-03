@@ -10,7 +10,7 @@ use raydium_cpmm_cpi::{
     states::{AmmConfig, OBSERVATION_SEED, POOL_LP_MINT_SEED, POOL_SEED, POOL_VAULT_SEED},
 };
 
-use crate::{constants::{DEFAULT_DECIMALS, DEFAULT_SUPPLY, FUNDING_AMOUNT, WSOL_ID}, events::PoolCreationEvent};
+use crate::{constants::{DEFAULT_DECIMALS, DEFAULT_SUPPLY, FUNDING_AMOUNT, MAX_FUNDING_AMOUNT, WSOL_ID}, errors::IobuildersError, events::PoolCreationEvent};
 
 /// This context allows us to create a raydium pool
 #[derive(Accounts)]
@@ -152,6 +152,10 @@ impl<'info> CreateCpmmPool<'info> {
     }
     pub fn create_cpmm_pool(&mut self, funding_amount: Option<u64>) -> Result<()> {
         let init_amount_0 = funding_amount.unwrap_or(FUNDING_AMOUNT);
+        require_gt!(init_amount_0, 0, IobuildersError::InvalidFundingAmount);
+        require!(init_amount_0 <= MAX_FUNDING_AMOUNT, IobuildersError::FundingAmountExceedsMax);
+        require!(self.creator_base_ata.amount >= init_amount_0, IobuildersError::InsufficientBaseBalance);
+
         let init_amount_1 = DEFAULT_SUPPLY;
         let open_time = Clock::get()?.unix_timestamp as u64;
 

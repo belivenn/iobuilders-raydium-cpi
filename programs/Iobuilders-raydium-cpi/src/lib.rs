@@ -4,6 +4,7 @@ pub mod contexts;
 pub use contexts::*;
 pub mod constants;
 pub mod events;
+pub mod errors;
 
 declare_id!("E2q9q82wdHYhad5LBe1At3UHut81z18Z2T71rdHpAFX2");
 
