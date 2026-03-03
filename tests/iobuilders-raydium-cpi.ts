@@ -4,7 +4,9 @@ import { IobuildersRaydiumCpi } from "../target/types/iobuilders_raydium_cpi";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, createSyncNativeInstruction, Account } from "@solana/spl-token";
 import { Keypair, SystemProgram, Commitment, PublicKey, SetComputeUnitLimitParams, ComputeBudgetProgram } from "@solana/web3.js";
 const commitment: Commitment = "confirmed";
-describe("workshop-raydium-cpi", () => {
+import { expect } from "chai";
+describe("iobuilders-raydium-cpi", () => {
+
 
   // Helper function to log a message  
   const log = async (signature: string): Promise<string> => {
@@ -189,6 +191,15 @@ describe("workshop-raydium-cpi", () => {
 
   // Test to create a raydium cpmm pool
   it("Creates a Raydium cpmm pool", async () => {
+    let captured: any = null;
+
+    const eventReceived = new Promise<void>((resolve) => {
+      const listener = program.addEventListener("poolCreationEvent", (event, slot) => {
+        captured = { event, slot };
+        program.removeEventListener(listener);
+        resolve();
+      });
+    });
 
     const createCpmmPoolTx = await program.methods
       .createCpmmPool(
@@ -249,6 +260,17 @@ describe("workshop-raydium-cpi", () => {
         )
     // Confirm txn
     await confirm(sig);
+
+    await eventReceived;
+
+    console.log("Event slot:", captured.slot);
+    console.log("Pool creation event:", captured.event);
+
+    expect(captured.event.creator.equals(creator.publicKey)).to.be.true;
+    expect(captured.event.poolAddress.equals(pool_state)).to.be.true;
+    expect(captured.event.baseMint.equals(WSOL_ID)).to.be.true;
+    expect(captured.event.tokenMint.equals(token_mint.publicKey)).to.be.true;
+    expect(captured.event.lpMint.equals(lp_mint)).to.be.true;
 
   });
 
