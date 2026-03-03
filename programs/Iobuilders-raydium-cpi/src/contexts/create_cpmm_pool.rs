@@ -182,12 +182,13 @@ impl<'info> CreateCpmmPool<'info> {
         cpi::initialize(cpi_context, init_amount_0, init_amount_1, open_time)?;
 
         emit!(PoolCreationEvent {
+            creator: self.creator.key(),
             pool_address: self.pool_state.key(),
             base_mint: self.base_mint.key(),
             token_mint: self.token_mint.key(),
             lp_mint: self.lp_mint.key(),
         });
-        
+
         Ok(())
     }
 }

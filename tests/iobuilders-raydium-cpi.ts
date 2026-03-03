@@ -6,33 +6,33 @@ import { Keypair, SystemProgram, Commitment, PublicKey, SetComputeUnitLimitParam
 const commitment: Commitment = "confirmed";
 describe("workshop-raydium-cpi", () => {
 
- // Helper function to log a message  
- const log = async (signature: string): Promise<string> => {
-  console.log(
-    `Your transaction signature: https://explorer.solana.com/transaction/${signature}?cluster=custom&customUrl=${connection.rpcEndpoint}\n`
-  );
-  return signature;
-};
+  // Helper function to log a message  
+  const log = async (signature: string): Promise<string> => {
+    console.log(
+      `Your transaction signature: https://explorer.solana.com/transaction/${signature}?cluster=custom&customUrl=${connection.rpcEndpoint}\n`
+    );
+    return signature;
+  };
 
-const confirmTx = async (signature: string) => {
-  const latestBlockhash = await anchor.getProvider().connection.getLatestBlockhash();
-  await anchor.getProvider().connection.confirmTransaction(
-    {
-      signature,
-      ...latestBlockhash,
-    },
-    commitment
-  )
-}
+  const confirmTx = async (signature: string) => {
+    const latestBlockhash = await anchor.getProvider().connection.getLatestBlockhash();
+    await anchor.getProvider().connection.confirmTransaction(
+      {
+        signature,
+        ...latestBlockhash,
+      },
+      commitment
+    )
+  }
 
-const confirmTxs = async (signatures: string[]) => {
-  await Promise.all(signatures.map(confirmTx))
-}
+  const confirmTxs = async (signatures: string[]) => {
+    await Promise.all(signatures.map(confirmTx))
+  }
 
-const provider = anchor.AnchorProvider.env();
-anchor.setProvider(provider);
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
 
-const connection = provider.connection;
+  const connection = provider.connection;
   const program = anchor.workspace.IobuildersRaydiumCpi as Program<IobuildersRaydiumCpi>;
 
   // Helper function to log the transaction signature
@@ -44,7 +44,7 @@ const connection = provider.connection;
     });
     await log(signature);
     return signature;
-  };  
+  };
 
   // Address of the Raydium Cpmm program on devnet
   const CPMM_PROGRAM_ID = new anchor.web3.PublicKey(
@@ -186,70 +186,70 @@ const connection = provider.connection;
     lp_mint_ata = getAssociatedTokenAddressSync(lp_mint, creator.publicKey);
 
   });
-  
- // Test to create a raydium cpmm pool
- it("Creates a Raydium cpmm pool", async () => {
 
-  const createCpmmPoolTx = await program.methods
-    .createCpmmPool(
-      null
-  )
-    .accountsPartial({
-      cpSwapProgram: CPMM_PROGRAM_ID,
-      creator: creator.publicKey,
-      ammConfig: AMM_CONFIG_ID,
-      authority: authority,
-      poolState: pool_state,
-      baseMint: WSOL_ID,
-      tokenMint: token_mint.publicKey,
-      lpMint: lp_mint,
-      creatorBaseAta: creator_base_ata,
-      creatorTokenAta: creator_token_ata,
-      creatorLpToken: lp_mint_ata,
-      token0Vault: token_vault_0,
-      token1Vault: token_vault_1,
-      createPoolFee: create_pool_fee,
-      observationState: observation_state,
-      tokenProgram: TOKEN_PROGRAM_ID,
-      token1Program: TOKEN_PROGRAM_ID,
-      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-      systemProgram: SystemProgram.programId,
-      rent: RENT_PROGRAM
+  // Test to create a raydium cpmm pool
+  it("Creates a Raydium cpmm pool", async () => {
 
-    })
-    .signers([creator, token_mint])
-    .instruction();
+    const createCpmmPoolTx = await program.methods
+      .createCpmmPool(
+        null
+      )
+      .accountsPartial({
+        cpSwapProgram: CPMM_PROGRAM_ID,
+        creator: creator.publicKey,
+        ammConfig: AMM_CONFIG_ID,
+        authority: authority,
+        poolState: pool_state,
+        baseMint: WSOL_ID,
+        tokenMint: token_mint.publicKey,
+        lpMint: lp_mint,
+        creatorBaseAta: creator_base_ata,
+        creatorTokenAta: creator_token_ata,
+        creatorLpToken: lp_mint_ata,
+        token0Vault: token_vault_0,
+        token1Vault: token_vault_1,
+        createPoolFee: create_pool_fee,
+        observationState: observation_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        token1Program: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: RENT_PROGRAM
+
+      })
+      .signers([creator, token_mint])
+      .instruction();
 
     const setComputeUnitLimitIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 250000 } as SetComputeUnitLimitParams);
     // fetching the latest blockhash
     let blockhash = await connection
-    .getLatestBlockhash()
-    .then(res => res.blockhash);
+      .getLatestBlockhash()
+      .then(res => res.blockhash);
 
     // creating a versioned message instead of leagacy
     const messageV0 = new anchor.web3.TransactionMessage({
       payerKey: creator.publicKey,
       recentBlockhash: blockhash,
       instructions: [setComputeUnitLimitIx, createCpmmPoolTx]
-    }).compileToV0Message([])    
+    }).compileToV0Message()
 
     const transaction = new anchor.web3.VersionedTransaction(messageV0);
 
-    transaction.sign([creator, token_mint]);        
-  // Step 3: Send and confirm the transaction with rpc skip preflight
-  const sig = await
-    anchor.getProvider()
-      .connection
-      // since we have already signed the tx, no need to pass the signers array again
-      .sendTransaction(
-        transaction,
-        {
-          skipPreflight: true,
-        }
-      )
-  // Confirm txn
-  await confirm(sig);
+    transaction.sign([creator, token_mint]);
+    // Step 3: Send and confirm the transaction with rpc skip preflight
+    const sig = await
+      anchor.getProvider()
+        .connection
+        // since we have already signed the tx, no need to pass the signers array again
+        .sendTransaction(
+          transaction,
+          {
+            skipPreflight: true,
+          }
+        )
+    // Confirm txn
+    await confirm(sig);
 
-});
+  });
 
 });
