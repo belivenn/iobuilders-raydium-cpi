@@ -2,7 +2,8 @@ use anchor_lang::prelude::*;
 
 pub mod contexts;
 pub use contexts::*;
-mod constants;
+pub mod constants;
+pub mod events;
 
 declare_id!("E2q9q82wdHYhad5LBe1At3UHut81z18Z2T71rdHpAFX2");
 

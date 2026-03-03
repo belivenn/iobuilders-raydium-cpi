@@ -10,7 +10,7 @@ use raydium_cpmm_cpi::{
     states::{AmmConfig, OBSERVATION_SEED, POOL_LP_MINT_SEED, POOL_SEED, POOL_VAULT_SEED},
 };
 
-use crate::constants::{DEFAULT_DECIMALS, DEFAULT_SUPPLY, FUNDING_AMOUNT, WSOL_ID};
+use crate::{constants::{DEFAULT_DECIMALS, DEFAULT_SUPPLY, FUNDING_AMOUNT, WSOL_ID}, events::PoolCreationEvent};
 
 /// This context allows us to create a raydium pool
 #[derive(Accounts)]
@@ -181,6 +181,13 @@ impl<'info> CreateCpmmPool<'info> {
         let cpi_context = CpiContext::new(self.cp_swap_program.to_account_info(), cpi_accounts);
         cpi::initialize(cpi_context, init_amount_0, init_amount_1, open_time)?;
 
+        emit!(PoolCreationEvent {
+            pool_address: self.pool_state.key(),
+            base_mint: self.base_mint.key(),
+            token_mint: self.token_mint.key(),
+            lp_mint: self.lp_mint.key(),
+        });
+        
         Ok(())
     }
 }
