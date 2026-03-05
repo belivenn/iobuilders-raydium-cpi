@@ -10,11 +10,22 @@ use raydium_cpmm_cpi::{
     states::{AmmConfig, OBSERVATION_SEED, POOL_LP_MINT_SEED, POOL_SEED, POOL_VAULT_SEED},
 };
 
-use crate::{constants::{DEFAULT_DECIMALS, DEFAULT_SUPPLY, FUNDING_AMOUNT, MAX_FUNDING_AMOUNT, WSOL_ID}, errors::IobuildersError, events::PoolCreationEvent};
+use crate::{constants::{DEFAULT_DECIMALS, DEFAULT_SUPPLY, FUNDING_AMOUNT, MAX_FUNDING_AMOUNT, POOL_RECORD_SEED, WSOL_ID}, errors::IobuildersError, events::PoolCreationEvent, state::PoolRecord};
 
 /// This context allows us to create a raydium pool
 #[derive(Accounts)]
 pub struct CreateCpmmPool<'info> {
+    #[account(
+        init, 
+        payer = creator, 
+        seeds = [
+            POOL_RECORD_SEED, 
+            token_mint.key().as_ref(),
+        ],
+        bump,
+        space = 8 + PoolRecord::INIT_SPACE,
+    )]
+    pub pool_record: Account<'info, PoolRecord>,
     pub cp_swap_program: Program<'info, RaydiumCpmm>,
     #[account(mut)]
     pub creator: Signer<'info>,
@@ -152,6 +163,7 @@ impl<'info> CreateCpmmPool<'info> {
     }
     pub fn create_cpmm_pool(&mut self, funding_amount: Option<u64>) -> Result<()> {
         let init_amount_0 = funding_amount.unwrap_or(FUNDING_AMOUNT);
+        
         require_gt!(init_amount_0, 0, IobuildersError::InvalidFundingAmount);
         require!(init_amount_0 <= MAX_FUNDING_AMOUNT, IobuildersError::FundingAmountExceedsMax);
         require!(self.creator_base_ata.amount >= init_amount_0, IobuildersError::InsufficientBaseBalance);
@@ -186,6 +198,14 @@ impl<'info> CreateCpmmPool<'info> {
         cpi::initialize(cpi_context, init_amount_0, init_amount_1, open_time)?;
 
         emit!(PoolCreationEvent {
+            creator: self.creator.key(),
+            pool_address: self.pool_state.key(),
+            base_mint: self.base_mint.key(),
+            token_mint: self.token_mint.key(),
+            lp_mint: self.lp_mint.key(),
+        });
+
+        self.pool_record.set_inner(PoolRecord {
             creator: self.creator.key(),
             pool_address: self.pool_state.key(),
             base_mint: self.base_mint.key(),

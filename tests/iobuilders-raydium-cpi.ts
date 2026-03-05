@@ -71,8 +71,8 @@ describe("iobuilders-raydium-cpi", () => {
     "So11111111111111111111111111111111111111112"
   );
   // Define keypairs for different roles
-  const [creator, token_mint, fee_nft_mint] =
-    [new Keypair(), new Keypair(), new Keypair()];
+  const [creator, token_mint ] =
+    [new Keypair(), new Keypair()];
 
   // This variable is the base vault account.
   let creator_base_ata: PublicKey;
@@ -99,10 +99,20 @@ describe("iobuilders-raydium-cpi", () => {
   // lp mint ata
   let lp_mint_ata: PublicKey;
 
+  // Pool record
+  let pool_record: PublicKey;
+
   it("Airdrop\n", async () => {
     await Promise.all([creator].map(async (k) => {
       return await anchor.getProvider().connection.requestAirdrop(k.publicKey, 100 * anchor.web3.LAMPORTS_PER_SOL)
     })).then(confirmTxs);
+    pool_record = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("pool_record"),
+        token_mint.publicKey.toBuffer()
+      ],
+      program.programId
+    )[0];
 
     // PDA address for the pool_state
     pool_state = PublicKey.findProgramAddressSync(
@@ -206,6 +216,7 @@ describe("iobuilders-raydium-cpi", () => {
         null
       )
       .accountsPartial({
+        poolRecord: pool_record,
         cpSwapProgram: CPMM_PROGRAM_ID,
         creator: creator.publicKey,
         ammConfig: AMM_CONFIG_ID,
@@ -271,6 +282,28 @@ describe("iobuilders-raydium-cpi", () => {
     expect(captured.event.baseMint.equals(WSOL_ID)).to.be.true;
     expect(captured.event.tokenMint.equals(token_mint.publicKey)).to.be.true;
     expect(captured.event.lpMint.equals(lp_mint)).to.be.true;
+
+    const accounts = await program.account.poolRecord.all([
+      {
+        memcmp: {
+          offset: 8,
+          bytes: creator.publicKey.toBase58(),
+        },
+      },
+    ]);
+
+   console.log("Filtered pool records:", accounts); 
+
+   expect(accounts.length).to.be.greaterThan(0);
+
+const record = accounts[0].account;
+
+expect(record.creator.equals(creator.publicKey)).to.be.true;
+expect(record.poolAddress.equals(pool_state)).to.be.true;
+expect(record.baseMint.equals(WSOL_ID)).to.be.true;
+expect(record.tokenMint.equals(token_mint.publicKey)).to.be.true;
+expect(record.lpMint.equals(lp_mint)).to.be.true;
+
 
   });
 
